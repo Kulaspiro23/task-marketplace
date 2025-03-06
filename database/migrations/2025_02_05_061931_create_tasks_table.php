@@ -16,9 +16,11 @@ return new class extends Migration
             $table->string('title');
             $table->text('description');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('taker_id')->nullable()->constrained('users')->onDelete('set null');
             $table->enum('status', ['open', 'in_progress', 'completed'])->default('open');
             $table->string('category');
             $table->json('skills');
+            $table->dateTime('deadline')->nullable();
             $table->timestamps();
         });
     }

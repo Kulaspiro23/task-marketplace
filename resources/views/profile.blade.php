@@ -18,7 +18,6 @@
                     <strong class="text-gray-700">Joined:</strong>
                     <p class="mt-1">{{ $user->created_at->format('F d, Y') }}</p>
                 </div>
-                <!-- Add more user data fields as needed -->
             </div>
         </div>
     </div>

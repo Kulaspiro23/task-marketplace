@@ -3,43 +3,96 @@
 @section('content')
 <div class="py-12">
   <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-    <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-      <div class="p-6 bg-white border-b border-gray-200">
+    <div class="bg-white shadow-sm sm:rounded-lg">
+      <div class="p-6">
         <h1 class="text-2xl font-bold mb-4">Dashboard</h1>
-
+        
         <!-- Create Task Button -->
         <button id="createTaskBtn" class="mb-4 bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
           Create New Task
         </button>
 
-        <!-- Tasks List -->
-        <div id="tasksList" class="space-y-4">
-          @forelse($tasks as $task)
-          <div class="border rounded-lg p-4 flex justify-between items-center">
-            <div>
+        <!-- Tab Navigation -->
+        <div class="mb-4 flex space-x-2">
+          <button id="tab-created" class="tab-button active px-4 py-2 border border-blue-500 text-blue-500" data-tab="created">
+            Created Tasks
+          </button>
+          <button id="tab-taken" class="tab-button px-4 py-2 border border-gray-300 text-gray-500" data-tab="taken">
+            Taken Tasks
+          </button>
+          <button id="tab-archived" class="tab-button px-4 py-2 border border-gray-300 text-gray-500" data-tab="archived">
+            Archived Tasks
+          </button>
+        </div>
+
+        <!-- Filters & Sorting -->
+        <div class="flex justify-between items-center mb-4">
+          <input type="text" id="searchInput" placeholder="Search tasks..." class="border rounded px-2 py-1 w-1/2">
+        </div>
+
+        <!-- Tab Contents -->
+        <div id="tab-content-created" class="tab-content">
+          @forelse($createdTasks as $task)
+            <div class="card p-4 border rounded mb-4">
               <h3 class="text-lg font-semibold">{{ $task->title }}</h3>
-              <p class="text-gray-600">{{ $task->description }}</p>
+              <p>{{ $task->description }}</p>
               <p class="text-sm text-gray-500">Category: {{ $task->category }}</p>
               <p class="text-sm text-gray-500">Skills: {{ implode(', ', $task->skills) }}</p>
+              <p class="text-sm text-gray-500">Deadline: {{ $task->deadline ? \Carbon\Carbon::parse($task->deadline)->format('Y-m-d H:i') : 'No deadline' }}</p>
               <p class="text-sm text-gray-500">Status: {{ ucfirst($task->status) }}</p>
+              <p class="text-sm text-gray-500">Taker: {{ $task->taker ? $task->taker->name : 'No taker yet' }}</p>
+              <!-- Action Buttons for tasks you created -->
+              <div class="flex space-x-2 mt-2">
+                <button class="edit-btn bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm"
+                  data-task='@json($task)'>
+                  Edit
+                </button>
+                <button class="delete-btn bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm"
+                  data-task-id="{{ $task->id }}">
+                  Delete
+                </button>
+              </div>
             </div>
-            <div class="flex space-x-2">
-              <!-- Pass the whole task object for editing -->
-              <button class="edit-btn bg-green-500 hover:bg-green-700 text-white font-bold py-1 px-3 rounded text-sm"
-                data-task='@json($task)'>
-                Edit
-              </button>
-              <!-- For deletion, only the ID is needed -->
-              <button class="delete-btn bg-red-500 hover:bg-red-700 text-white font-bold py-1 px-3 rounded text-sm"
-                data-task-id="{{ $task->id }}">
-                Delete
-              </button>
-            </div>
-          </div>
           @empty
-          <p class="text-gray-500">You have no tasks yet.</p>
+            <p class="text-gray-500">No created tasks available.</p>
           @endforelse
         </div>
+
+        <div id="tab-content-taken" class="tab-content hidden">
+          @forelse($takenTasks as $task)
+            <div class="card p-4 border rounded mb-4">
+              <h3 class="text-lg font-semibold">{{ $task->title }}</h3>
+              <p>{{ $task->description }}</p>
+              <p class="text-sm text-gray-500">Category: {{ $task->category }}</p>
+              <p class="text-sm text-gray-500">Skills: {{ implode(', ', $task->skills) }}</p>
+              <p class="text-sm text-gray-500">Deadline: {{ $task->deadline ? \Carbon\Carbon::parse($task->deadline)->format('Y-m-d H:i') : 'No deadline' }}</p>
+              <p class="text-sm text-gray-500">Status: {{ ucfirst($task->status) }}</p>
+              <p class="text-sm text-gray-500">Posted by: {{ $task->user->name }}</p>
+            </div>
+          @empty
+            <p class="text-gray-500">No taken tasks available.</p>
+          @endforelse
+        </div>
+
+        <div id="tab-content-archived" class="tab-content hidden">
+          @forelse($archivedTasks as $task)
+            <div class="card p-4 border rounded mb-4 bg-gray-100">
+              <h3 class="text-lg font-semibold">{{ $task->title }}</h3>
+              <p>{{ $task->description }}</p>
+              <p class="text-sm text-gray-500">Category: {{ $task->category }}</p>
+              <p class="text-sm text-gray-500">Skills: {{ implode(', ', $task->skills) }}</p>
+              <p class="text-sm text-gray-500">Deadline: {{ $task->deadline ? \Carbon\Carbon::parse($task->deadline)->format('Y-m-d H:i') : 'No deadline' }}</p>
+              <p class="text-sm text-gray-500">Status: {{ ucfirst($task->status) }}</p>
+              <p class="text-sm text-gray-500">Posted by: {{ $task->user->name }}</p>
+              @if($task->taker)
+                <p class="text-sm text-gray-500">Taker: {{ $task->taker->name }}</p>
+              @endif
+            </div>
+          @empty
+            <p class="text-gray-500">No archived tasks available.</p>
+          @endforelse
+        </div>
+
       </div>
     </div>
   </div>
@@ -68,6 +121,10 @@
           <div class="mb-4">
             <label for="skills" class="block text-gray-700 text-sm font-bold mb-2">Skills (comma-separated):</label>
             <input type="text" name="skills" id="skills" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+          </div>
+          <div class="mb-4">
+            <label for="deadline" class="block text-gray-700 text-sm font-bold mb-2">Deadline:</label>
+            <input type="datetime-local" name="deadline" id="deadline" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
           </div>
         </div>
         <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -107,6 +164,10 @@
           <div class="mb-4">
             <label for="editSkills" class="block text-gray-700 text-sm font-bold mb-2">Skills (comma-separated):</label>
             <input type="text" name="skills" id="editSkills" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
+          </div>
+          <div class="mb-4">
+            <label for="editDeadline" class="block text-gray-700 text-sm font-bold mb-2">Deadline:</label>
+            <input type="datetime-local" name="deadline" id="editDeadline" class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline" required>
           </div>
         </div>
         <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
@@ -159,6 +220,7 @@
     </div>
   </div>
 </div>
+
 @endsection
 
 @push('scripts')

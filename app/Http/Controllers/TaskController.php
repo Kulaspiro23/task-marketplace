@@ -4,12 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\Task;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
+
+
 
 class TaskController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Task::with('user')->where('status', 'open');
+        $query = Task::with('user')->whereIn('status', ['open', 'in_progress']);
 
         // Apply filter
         $filter = $request->input('filter', 'all');
@@ -25,7 +29,6 @@ class TaskController extends Controller
 
         // Apply skills filter
         $skills = $request->input('skills', []);
-        // If $skills is not an array (for example, if it comes as a comma-separated string), convert it.
         if (!is_array($skills)) {
             $skills = $skills ? explode(',', $skills) : [];
         }
@@ -46,6 +49,12 @@ class TaskController extends Controller
             });
         }
 
+        // Exclude expired  tasks: only show tasks with no deadline or a deadline in the future.
+        $query->where(function ($q) {
+            $q->whereNull('deadline')
+            ->orWhere('deadline', '>', now());
+        });
+
         $tasks = $query->latest()->paginate(10);
 
         $categories = Task::distinct('category')->pluck('category');
@@ -54,12 +63,7 @@ class TaskController extends Controller
         return view('welcome', compact('tasks', 'filter', 'search', 'category', 'skills', 'categories', 'allSkills'));
     }
 
-    public function userTasks()
-    {
-        $user = auth()->user();
-        $tasks = Task::where('user_id', $user->id)->latest()->get();
-        return view('dashboard', compact('tasks'));
-    }
+
 
     public function store(Request $request)
     {
@@ -68,6 +72,7 @@ class TaskController extends Controller
             'description' => 'required',
             'category' => 'required|max:255',
             'skills' => 'required|string',
+            'deadline' => 'nullable|date|after:today',
         ]);
 
         $validatedData['user_id'] = auth()->id();
@@ -76,7 +81,15 @@ class TaskController extends Controller
 
         $task = Task::create($validatedData);
 
-        return response()->json($task);
+        return response()->json([
+            'id' => $task->id,
+            'title' => $task->title,
+            'description' => $task->description,
+            'category' => $task->category,
+            'skills' => $task->skills,
+            'status' => $task->status,
+            'deadline' => $task->deadline ? Carbon::parse($task->deadline)->format('Y-m-d H:i') : 'No deadline',
+        ]);
     }
 
     public function update(Request $request, Task $task)
@@ -86,18 +99,29 @@ class TaskController extends Controller
         }
 
         $validatedData = $request->validate([
-            'title' => 'required|max:255',
+            'title'       => 'required|max:255',
             'description' => 'required',
-            'category' => 'required|max:255',
-            'skills' => 'required',
+            'category'    => 'required|max:255',
+            'skills'      => 'required',
+            'deadline'    => 'nullable|date|after:today',
         ]);
 
         $validatedData['skills'] = explode(',', $validatedData['skills']);
 
         $task->update($validatedData);
 
-        return response()->json($task);
+        return response()->json([
+            'id'          => $task->id,
+            'title'       => $task->title,
+            'description' => $task->description,
+            'category'    => $task->category,
+            'skills'      => $task->skills,
+            'status'      => $task->status,
+            'deadline'    => $task->deadline ? $task->deadline->format('Y-m-d\TH:i') : '',
+        ]);
     }
+
+
 
     public function destroy(Task $task)
     {
@@ -115,21 +139,77 @@ class TaskController extends Controller
 
     public function takeTask(Task $task)
     {
-        if ($task->status !== 'open') {
-            return response()->json(['message' => 'This task is not available'], 400);
+        if ($task->user_id === Auth::id()) {
+            return response()->json(['success' => false, 'message' => 'You cannot take your own task.']);
         }
 
-        $task->update([
-            'status' => 'in_progress',
-            'student_id' => auth()->id(),
-        ]);
+        if (!$task->taker_id) {
+            $task->update([
+                'taker_id' => Auth::id(),
+                'status' => 'in_progress',
+            ]);
 
-        return response()->json($task);
+            return response()->json([
+                'success' => true,
+                'taker_name' => Auth::user()->name, // Send taker's name to frontend
+            ]);
+        }
+
+        return response()->json(['success' => false, 'message' => 'Task is already taken.']);
     }
+
 
     public function show(Task $task)
     {
         return response()->json($task);
     }
+
+    public function dashboard(Request $request)
+    {
+        $user = auth()->user();
+        $now = Carbon::now();
+
+        // Created Tasks: tasks you created that are active (deadline not passed)
+        $createdTasks = Task::with('taker')
+            ->where('user_id', $user->id)
+            ->where(function($query) use ($now) {
+                $query->whereNull('deadline')->orWhere('deadline', '>', $now);
+            })
+            ->latest()
+            ->get();
+
+        // Taken Tasks: tasks you accepted that are active
+        $takenTasks = Task::with('user')
+            ->where('taker_id', $user->id)
+            ->where(function($query) use ($now) {
+                $query->whereNull('deadline')->orWhere('deadline', '>', $now);
+            })
+            ->latest()
+            ->get();
+
+        // Archived Tasks: tasks (created or taken by you) that are expired or completed
+        $archivedTasks = Task::with(['user', 'taker'])
+            ->where(function($query) use ($user) {
+                $query->where('user_id', $user->id)
+                    ->orWhere('taker_id', $user->id);
+            })
+            ->where(function($query) use ($now) {
+                $query->whereNotNull('deadline')->where('deadline', '<=', $now)
+                    ->orWhere('status', 'completed');
+            })
+            ->latest()
+            ->get();
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'createdTasks' => $createdTasks,
+                    'takenTasks'   => $takenTasks,
+                    'archivedTasks'=> $archivedTasks,
+                ]);
+            }
+
+        return view('dashboard', compact('createdTasks', 'takenTasks', 'archivedTasks'));
+    }
+
 }
 

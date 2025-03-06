@@ -14,8 +14,9 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Dashboard will show user's tasks
-Route::get('/dashboard', [TaskController::class, 'userTasks'])->middleware('auth')->name('dashboard');
 Route::get('/profile', [AuthController::class, 'profile'])->middleware('auth')->name('profile');
+Route::get('/dashboard', [TaskController::class, 'dashboard'])->middleware('auth')->name('dashboard');
+
 
 // Task management routes
 Route::middleware('auth')->group(function () {
@@ -23,6 +24,8 @@ Route::middleware('auth')->group(function () {
     Route::put('/tasks/{task}', [TaskController::class, 'update'])->name('tasks.update');
     Route::delete('/tasks/{task}', [TaskController::class, 'destroy'])->name('tasks.destroy');
     Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
-    Route::post('/tasks/{task}/take', [TaskController::class, 'takeTask'])->name('tasks.take');
+    Route::post('/tasks/{task}/accept', [TaskController::class, 'takeTask'])->middleware('auth');
+    Route::post('/tasks/{task}/complete', [TaskController::class, 'completeTask'])->middleware('auth');
+    Route::post('/tasks/{task}/cancel', [TaskController::class, 'cancelTask'])->middleware('auth');
 });
 

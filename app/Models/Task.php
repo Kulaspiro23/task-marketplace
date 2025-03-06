@@ -13,17 +13,25 @@ class Task extends Model
         'title',
         'description',
         'user_id',
+        'taker_id',
         'status',
         'category',
-        'skills'
+        'skills',
+        'deadline',
     ];
     
     protected $casts = [
         'skills' => 'array',
+        'deadline' => 'datetime',
     ];
 
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function taker()
+    {
+        return $this->belongsTo(User::class, 'taker_id');
     }
 }

@@ -53,24 +53,33 @@
             <p class="text-gray-500">No tasks available at the moment.</p>
           @else
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-              @foreach($tasks as $task)
-                <div class="border rounded-lg p-4 hover:shadow-md transition-shadow">
-                  <h3 class="text-lg font-semibold text-gray-800">{{ $task->title }}</h3>
-                  <p class="text-gray-600 mt-2">{{ Str::limit($task->description, 100) }}</p>
-                  <div class="mt-4 flex flex-col">
-                    <div class="flex justify-between items-center mb-2">
-                      <span class="text-sm font-medium 
-                        {{ $task->status === 'open' ? 'text-green-600' : ($task->status === 'in_progress' ? 'text-blue-600' : 'text-gray-600') }}">
-                        {{ ucfirst($task->status) }}
-                      </span>
-                      <span class="text-sm text-gray-500">{{ $task->created_at->diffForHumans() }}</span>
-                    </div>
-                    <span class="text-sm text-gray-500">Posted by: {{ $task->user->name }}</span>
-                    <span class="text-sm text-gray-500">Category: {{ $task->category }}</span>
-                    <span class="text-sm text-gray-500">Skills: {{ implode(', ', $task->skills) }}</span>
+            @foreach($tasks as $task)
+              <div id="task-{{ $task->id }}" class="border rounded-lg p-4 hover:shadow-md transition-shadow">
+                <h3 class="text-lg font-semibold text-gray-800">{{ $task->title }}</h3>
+                <p class="text-gray-600 mt-2">{{ Str::limit($task->description, 100) }}</p>
+                <div class="mt-4 flex flex-col">
+                  <div class="flex justify-between items-center mb-2">
+                    <span class="text-sm font-medium status-{{ $task->id }} 
+                      {{ $task->status === 'open' ? 'text-green-600' : ($task->status === 'in_progress' ? 'text-blue-600' : 'text-gray-600') }}">
+                      {{ ucfirst($task->status) }}
+                    </span>
+                    <span class="text-sm text-gray-500">{{ $task->created_at->diffForHumans() }}</span>
                   </div>
+                  <span class="text-sm text-gray-500">Posted by: {{ $task->user->name }}</span>
+                  <span class="text-sm text-gray-500">Category: {{ $task->category }}</span>
+                  <span class="text-sm text-gray-500">Skills: {{ implode(', ', $task->skills) }}</span>
+                  <span class="text-sm text-gray-500">Deadline: {{ $task->deadline ? \Carbon\Carbon::parse($task->deadline)->toDayDateTimeString() : 'No deadline' }}</span>
+                  <span class="text-sm text-gray-500 taker-{{ $task->id }}">Taker: {{ $task->taker ? $task->taker->name : 'No taker yet' }}</span>
+
+                  @if(Auth::check() && Auth::id() !== $task->user_id && !$task->taker_id)
+                    <button class="accept-task-btn bg-blue-500 hover:bg-blue-700 text-white font-bold py-1 px-3 rounded text-sm" 
+                      data-task-id="{{ $task->id }}">
+                      Accept Task
+                    </button>
+                  @endif
                 </div>
-              @endforeach
+              </div>
+            @endforeach
             </div>
           @endif
         </div>
