@@ -199,7 +199,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     submitButton.disabled = true;
     submitButton.textContent = "Updating...";
-    console.log("About to send PUT request with data:", data);
     fetch(`/tasks/${taskId}`, {
       method: "PUT",
       headers: {
