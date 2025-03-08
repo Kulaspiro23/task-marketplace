@@ -19,7 +19,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const cancelDeleteBtn = document.getElementById("cancelDelete");
 
   const searchInput = document.getElementById("searchInput");
-  const sortSelect = document.getElementById("sortSelect");
   
   // --- Tab switching elements ---
   const tabButtons = document.querySelectorAll('.tab-button');
@@ -138,12 +137,6 @@ document.addEventListener("DOMContentLoaded", () => {
         card.classList.add("hidden");
       }
     });
-  });
-
-  sortSelect.addEventListener('change', () => {
-    // This example assumes you will implement sorting by reordering the cards
-    // For a full solution, you might want to trigger an AJAX call with sort parameters
-    refreshTasksList();
   });
 
   // --- Modal Open/Close Handlers ---
